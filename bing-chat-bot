@@ -4,8 +4,10 @@ import os
 
 from bing_chat_bot.initializer import get_bot
 
+BING_CHAT_COOKIE_PATHS = os.getenv('BING_CHAT_COOKIES_PATH')
+
 async def start():
-    bot = await get_bot(os.getenv('BING_CHAT_COOKIES_PATH'))
+    bot = await get_bot(BING_CHAT_COOKIE_PATHS.split(":"))
     await bot.start(os.getenv('BING_CHAT_BOT_TOKEN'))  # run the bot with the token
 
 asyncio.run(start())

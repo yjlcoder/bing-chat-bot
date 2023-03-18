@@ -13,10 +13,38 @@ class BingBotResponse:
         self.links: str = links
 
 
+class BingBotStatus:
+    def __init__(self, current_style, profile_index, profile_total_num):
+        self.current_style: str = current_style
+        self.profile_index: int = profile_index
+        self.profile_total_num: int = profile_total_num
+
+
 class BingBot:
-    def __init__(self, cookie_path: str):
-        self._bot = Chatbot(cookiePath=cookie_path)
+    def __init__(self, cookie_paths: List[str]):
+        self._cookie_paths = cookie_paths
+        self._profile_index = 0
+
+        self._bot = Chatbot(cookiePath=self._cookie_paths[0])
         self._current_style = ConversationStyle.balanced
+
+    def get_bot_status(self) -> BingBotStatus:
+        return BingBotStatus(
+            self._current_style.name,
+            self._profile_index + 1,
+            len(self._cookie_paths)
+        )
+
+    async def switch_profile(self):
+        """
+        Switch Bing profile (account)
+        """
+        try:
+            await self._bot.close()
+        except Exception:
+            pass
+        self._profile_index = (self._profile_index + 1) % len(self._cookie_paths)
+        self._bot = Chatbot(cookiePath=self._cookie_paths[self._profile_index])
 
     async def reset(self):
         await self._bot.reset()
@@ -35,10 +63,12 @@ class BingBot:
         result = response_item['result']
         if result['value'] != 'Success':
             await self.reset()
-            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None, None, None)
+            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None,
+                                   None, None)
 
         throttling = response_item['throttling']
-        cur_num, max_num = int(throttling['numUserMessagesInConversation']), int(throttling['maxNumUserMessagesInConversation'])
+        cur_num, max_num = int(throttling['numUserMessagesInConversation']), int(
+            throttling['maxNumUserMessagesInConversation'])
 
         message = response_item['messages'][-1]
         message_text = message['text']
