@@ -42,6 +42,10 @@ class BingBot:
         message = response_item['messages'][-1]
         message_text = message['text']
 
-        suggested_responses = [i['text'] for i in message['suggestedResponses']]
+        suggested_responses = []
+        try:
+            suggested_responses = [i['text'] for i in message['suggestedResponses']]
+        except Exception:
+            pass
 
         return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses)
