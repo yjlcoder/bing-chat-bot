@@ -42,7 +42,7 @@ def listen_on_message_event(bot: discord.Bot, bing: BingBot):
         ctx: discord.ApplicationContext = await bot.get_application_context(message)
         async with ctx.typing():
             bing_resp: BingBotResponse = await bing.converse(message.content)
-        await message.reply(f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num}) {bing_resp.message}")
+        await message.reply(format_response_body(bing_resp), embed=format_response_embed(bing_resp), mention_author=False)
 
 
 async def get_bot(bing_bot_cookie_path) -> discord.Bot:
@@ -61,3 +61,16 @@ async def get_bot(bing_bot_cookie_path) -> discord.Bot:
     listen_on_message_event(bot, bing_bot)
 
     return bot
+
+
+def format_response_body(bing_resp: BingBotResponse):
+    return bing_resp.message
+
+
+def format_response_embed(bing_resp):
+    embed = discord.Embed()
+    if bing_resp.links:
+        embed.add_field(name="Links", value=bing_resp.links)
+    embed.add_field(name="Limit", value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
+    return embed
+
