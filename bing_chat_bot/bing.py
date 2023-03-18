@@ -35,7 +35,7 @@ class BingBot:
         result = response_item['result']
         if result['value'] != 'Success':
             await self.reset()
-            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None, None)
+            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None, None, None)
 
         throttling = response_item['throttling']
         cur_num, max_num = int(throttling['numUserMessagesInConversation']), int(throttling['maxNumUserMessagesInConversation'])
