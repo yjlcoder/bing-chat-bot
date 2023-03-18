@@ -85,7 +85,7 @@ def format_response_body(bing_resp: BingBotResponse):
     return bing_resp.message
 
 
-def format_response_embed(bing_resp):
+def format_response_embed(bing_resp: BingBotResponse):
     has_value = False
 
     embed = discord.Embed()
@@ -93,6 +93,8 @@ def format_response_embed(bing_resp):
     # Links
     if bing_resp.links:
         has_value = True
+        if len(bing_resp.links) > 1023:
+            bing_resp.links = "Message cannot show: too long."
         embed.add_field(name="Links", value=bing_resp.links)
 
     # Throttling Limit
