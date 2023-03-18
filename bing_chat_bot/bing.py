@@ -89,9 +89,9 @@ class BingBot:
 
         citations = None
         try:
-            citations = message['adaptiveCards'][0]['body'][0]['text']
-            if citations.startswith('[1]'):
-                citations = citations.split('\n\n')[0]
+            citation_text = message['adaptiveCards'][0]['body'][0]['text']
+            if citation_text.startswith('[1]'):
+                citations = citation_text.split('\n\n')[0]
         except Exception:
             pass
 
