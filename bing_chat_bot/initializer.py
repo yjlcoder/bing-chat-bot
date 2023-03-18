@@ -19,16 +19,19 @@ def add_command_style(bot: discord.Bot, bing: BingBot):
     async def creative(ctx: discord.ApplicationContext):
         await bing.switch_style('creative')
         await ctx.respond("Switch chat style to Creative")
+        await bot.change_presence(activity=discord.Game('Creative'))
 
     @chat_style_command_group.command(description="Switch chat style to Balanced")
     async def balanced(ctx: discord.ApplicationContext):
         await bing.switch_style('balanced')
         await ctx.respond("Switch chat style to Balanced")
+        await bot.change_presence(activity=discord.Game('Balanced'))
 
     @chat_style_command_group.command(description="Switch chat style to Precise")
     async def precise(ctx: discord.ApplicationContext):
         await bing.switch_style('precise')
         await ctx.respond("Switch chat style to Precise")
+        await bot.change_presence(activity=discord.Game('Precise'))
 
 
 def listen_on_message_event(bot: discord.Bot, bing: BingBot):
@@ -51,6 +54,7 @@ async def get_bot(bing_bot_cookie_path) -> discord.Bot:
     @bot.event
     async def on_ready():
         print(f"{bot.user} is ready and online!")
+        await bot.change_presence(activity=discord.Game('Balanced'))
 
     add_command_reset(bot, bing_bot)
     add_command_style(bot, bing_bot)
