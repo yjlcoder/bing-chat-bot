@@ -355,6 +355,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # App related data
-cookies.json
+cookies*
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,pycharm+all,windows,macos,linux
