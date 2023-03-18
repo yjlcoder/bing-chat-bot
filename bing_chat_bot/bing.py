@@ -4,13 +4,15 @@ from EdgeGPT import Chatbot, ConversationStyle
 
 
 class BingBotResponse:
-    def __init__(self, success, message, current_conversation_num, max_conversation_num, suggested_responses, links):
+    def __init__(self, success, message, current_conversation_num, max_conversation_num, suggested_responses, links,
+                 citations):
         self.success: bool = success
         self.message: str = message
         self.current_conversation_num: int = current_conversation_num
         self.max_conversation_num: int = max_conversation_num
         self.suggested_responses: List[int] = suggested_responses
         self.links: str = links
+        self.citations: str = citations
 
 
 class BingBotStatus:
@@ -64,7 +66,7 @@ class BingBot:
         if result['value'] != 'Success':
             await self.reset()
             return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None,
-                                   None, None)
+                                   None, None, None)
 
         throttling = response_item['throttling']
         cur_num, max_num = int(throttling['numUserMessagesInConversation']), int(
@@ -85,4 +87,12 @@ class BingBot:
         except Exception:
             pass
 
-        return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses, links)
+        citations = None
+        try:
+            citation_text = message['adaptiveCards'][0]['body'][0]['text']
+            if citation_text.startswith('[1]'):
+                citations = citation_text.split('\n\n')[0]
+        except Exception:
+            pass
+
+        return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses, links, citations)

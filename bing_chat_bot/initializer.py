@@ -1,3 +1,5 @@
+import re
+
 import discord
 
 from .bing import BingBot, BingBotResponse
@@ -89,13 +91,18 @@ def format_response_embed(bing_resp: BingBotResponse):
     has_value = False
 
     embed = discord.Embed()
+    embed.title = ""
+    embed.description = ""
+
+    # Citations
+    if bing_resp.citations is not None:
+        has_value = True
+        format_response_embed_add_citations(bing_resp, embed)
 
     # Links
     if bing_resp.links:
         has_value = True
-        if len(bing_resp.links) > 1023:
-            bing_resp.links = "Message cannot show: too long."
-        embed.add_field(name="Links", value=bing_resp.links)
+        format_response_embed_add_links(bing_resp, embed)
 
     # Throttling Limit
     if bing_resp.current_conversation_num is not None and bing_resp.max_conversation_num is not None:
@@ -103,3 +110,38 @@ def format_response_embed(bing_resp: BingBotResponse):
         embed.add_field(name="Limit", value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
 
     return embed if has_value else None
+
+
+def format_response_embed_add_links(bing_resp: BingBotResponse, embed: discord.Embed):
+    links = bing_resp.links
+    if links is None or len(links) == 0:
+        return
+
+    pattern = re.compile(r"\[([0-9]+\.\ \S+)\]\(([\S]+)\)")
+    matches = re.findall(pattern, links)
+    if matches is None or len(matches) == 0:
+        if len(links) > 1023:
+            links = "Message cannot show: too long."
+        embed.add_field(name="Links", value=links)
+    else:
+        for match in matches:
+            hostname, url = match
+            embed.add_field(name=hostname, value=f"[Link]({url})")
+
+
+def format_response_embed_add_citations(bing_resp, embed):
+    citations = bing_resp.citations
+    if citations is None or len(citations) == 0:
+        return
+
+    pattern = re.compile(r'\[(\d+)\]: (\S+) \"([^\"]+)\"')
+    matches = re.findall(pattern, citations)
+    if matches is None or len(matches) == 0:
+        if len(citations) > 4095:
+            citations = "Citations cannot show: too long"
+        embed.description = citations
+    else:
+        embed.title = "Citations"
+        for match in matches:
+            citation_num, url, title = match
+            embed.description += f"[[{citation_num}] {title}]({url})\n\n"
