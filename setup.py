@@ -10,5 +10,6 @@ setup(name='Bing Chat Discord Bot',
       author='Yang Liu',
       author_email='yang.jace.liu@linux.com',
       url='https://github.com/yang-jace-liu/bing-chat-bot',
+      scripts=['scripts/bing-chat-bot'],
       packages=find_packages(),
      )
