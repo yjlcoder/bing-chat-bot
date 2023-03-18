@@ -4,12 +4,13 @@ from EdgeGPT import Chatbot, ConversationStyle
 
 
 class BingBotResponse:
-    def __init__(self, success, message, current_conversation_num, max_conversation_num, suggested_responses):
+    def __init__(self, success, message, current_conversation_num, max_conversation_num, suggested_responses, links):
         self.success: bool = success
         self.message: str = message
         self.current_conversation_num: int = current_conversation_num
         self.max_conversation_num: int = max_conversation_num
         self.suggested_responses: List[int] = suggested_responses
+        self.links: str = links
 
 
 class BingBot:
@@ -48,4 +49,10 @@ class BingBot:
         except Exception:
             pass
 
-        return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses)
+        links = None
+        try:
+            links = message['adaptiveCards'][0]['body'][1]['text']
+        except Exception:
+            pass
+
+        return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses, links)
