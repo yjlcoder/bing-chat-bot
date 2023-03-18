@@ -91,6 +91,13 @@ def format_response_embed(bing_resp: BingBotResponse):
     has_value = False
 
     embed = discord.Embed()
+    embed.title = ""
+    embed.description = ""
+
+    # Citations
+    if bing_resp.citations is not None:
+        has_value = True
+        format_response_embed_add_citations(bing_resp, embed)
 
     # Links
     if bing_resp.links:
@@ -120,3 +127,21 @@ def format_response_embed_add_links(bing_resp: BingBotResponse, embed: discord.E
         for match in matches:
             hostname, url = match
             embed.add_field(name=hostname, value=f"[Link]({url})")
+
+
+def format_response_embed_add_citations(bing_resp, embed):
+    citations = bing_resp.citations
+    if citations is None or len(citations) == 0:
+        return
+
+    pattern = re.compile(r'\[(\d+)\]: (\S+) \"([^\"]+)\"')
+    matches = re.findall(pattern, citations)
+    if matches is None or len(matches) == 0:
+        if len(citations) > 4095:
+            citations = "Citations cannot show: too long"
+        embed.description = citations
+    else:
+        embed.title = "Citations"
+        for match in matches:
+            citation_num, url, title = match
+            embed.description += f"[[{citation_num}] {title}]({url})\n\n"
