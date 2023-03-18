@@ -68,9 +68,19 @@ def format_response_body(bing_resp: BingBotResponse):
 
 
 def format_response_embed(bing_resp):
+    has_value = False
+
     embed = discord.Embed()
+
+    # Links
     if bing_resp.links:
+        has_value = True
         embed.add_field(name="Links", value=bing_resp.links)
-    embed.add_field(name="Limit", value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
-    return embed
+
+    # Throttling Limit
+    if bing_resp.current_conversation_num is not None and bing_resp.max_conversation_num is not None:
+        has_value = True
+        embed.add_field(name="Limit", value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
+
+    return embed if has_value else None
 
