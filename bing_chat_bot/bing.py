@@ -1,18 +1,24 @@
-from typing import List
+from typing import List, Optional
 
 from EdgeGPT import Chatbot, ConversationStyle
 
 
 class BingBotResponse:
-    def __init__(self, success, message, current_conversation_num, max_conversation_num, suggested_responses, links,
-                 citations):
+    def __init__(self,
+                 success,
+                 message,
+                 current_conversation_num: Optional[int] = None,
+                 max_conversation_num: Optional[int] = None,
+                 suggested_responses: Optional[List[str]] = None,
+                 links: Optional[str] = None,
+                 citations: Optional[str] = None):
         self.success: bool = success
         self.message: str = message
-        self.current_conversation_num: int = current_conversation_num
-        self.max_conversation_num: int = max_conversation_num
-        self.suggested_responses: List[int] = suggested_responses
-        self.links: str = links
-        self.citations: str = citations
+        self.current_conversation_num: Optional[int] = current_conversation_num
+        self.max_conversation_num: Optional[int] = max_conversation_num
+        self.suggested_responses: Optional[List[str]] = suggested_responses
+        self.links: Optional[str] = links
+        self.citations: Optional[str] = citations
 
 
 class BingBotStatus:
@@ -65,8 +71,7 @@ class BingBot:
         result = response_item['result']
         if result['value'] != 'Success':
             await self.reset()
-            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}', None, None,
-                                   None, None, None)
+            return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}')
 
         throttling = response_item['throttling']
         cur_num, max_num = int(throttling['numUserMessagesInConversation']), int(
@@ -75,7 +80,7 @@ class BingBot:
         message = response_item['messages'][-1]
         if message['author'] is None or message['author'] != 'bot':
             await self.reset()
-            return BingBotResponse(False, f'Error: No response from Bing Chat Bot', None, None, None, None, None)
+            return BingBotResponse(False, f'Error: No response from Bing Chat Bot')
         message_text = message['text']
 
         suggested_responses = []
