@@ -73,6 +73,9 @@ class BingBot:
             throttling['maxNumUserMessagesInConversation'])
 
         message = response_item['messages'][-1]
+        if message['author'] is None or message['author'] != 'bot':
+            await self.reset()
+            return BingBotResponse(False, f'Error: No response from Bing Chat Bot', None, None, None, None, None)
         message_text = message['text']
 
         suggested_responses = []
