@@ -1,147 +1,107 @@
-import re
+from typing import List
 
 import discord
 
 from .bing import BingBot, BingBotResponse
+from .formatter import Formatter, FormatterResponse, FormatterOptions, FormatterResponseType
 
 
-def add_command_reset(bot: discord.Bot, bing: BingBot):
-    # Reset the conversation and start a new one
-    @bot.command(name='reset', description="Reset the conversation")
-    async def reset(ctx: discord.ApplicationContext):
-        await bing.reset()
-        await ctx.respond("Reset the conversion")
+class BotManager:
+    def __init__(self, bing_bot_cookie_paths):
+        self.bing = BingBot(bing_bot_cookie_paths)
+        self._formatter_options = FormatterOptions(show_embed=True)
+        self._formatter = Formatter(formatter_options=self._formatter_options)
 
+    def initialize(self, bot: discord.Bot):
+        @bot.event
+        async def on_ready():
+            print(f"{bot.user} is ready and online!")
+            await self._switch_bot_status(bot)
 
-def add_command_style(bot: discord.Bot, bing: BingBot):
-    # Set the bing chat style: Creative, Balanced, Precise
-    chat_style_command_group = bot.create_group("style", "Switch chat style")
+        self._add_commands(bot)
+        self._listen_on_message_event(bot)
 
-    @chat_style_command_group.command(description="Switch chat style to Creative")
-    async def creative(ctx: discord.ApplicationContext):
-        await switch_chat_style(ctx, bot, bing, "creative")
+    def _add_commands(self, bot: discord.Bot):
+        self._add_command_reset(bot)
+        self._add_command_style(bot)
+        self._add_command_switch_profile(bot)
 
-    @chat_style_command_group.command(description="Switch chat style to Balanced")
-    async def balanced(ctx: discord.ApplicationContext):
-        await switch_chat_style(ctx, bot, bing, "balanced")
+    def _add_command_reset(self, bot: discord.Bot):
+        # Reset the conversation and start a new one
+        @bot.command(name='reset', description="Reset the conversation")
+        async def reset(ctx: discord.ApplicationContext):
+            await self.bing.reset()
+            await ctx.respond("Reset the conversion")
 
-    @chat_style_command_group.command(description="Switch chat style to Precise")
-    async def precise(ctx: discord.ApplicationContext):
-        await switch_chat_style(ctx, bot, bing, "precise")
+    def _add_command_style(self, bot: discord.Bot):
+        # Set the bing chat style: Creative, Balanced, Precise
+        chat_style_command_group = bot.create_group("style", "Switch chat style")
 
+        @chat_style_command_group.command(description="Switch chat style to Creative")
+        async def creative(ctx: discord.ApplicationContext):
+            await self.switch_chat_style(ctx, bot, "creative")
 
-def add_command_switch_profile(bot, bing: BingBot):
-    @bot.command(name='profile', description="Switch the profile")
-    async def profile(ctx: discord.ApplicationContext):
-        await bing.switch_profile()
-        bing_status = bing.get_bot_status()
-        await switch_bot_status(bot, bing)
-        await ctx.respond(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
-        print(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
+        @chat_style_command_group.command(description="Switch chat style to Balanced")
+        async def balanced(ctx: discord.ApplicationContext):
+            await self.switch_chat_style(ctx, bot, "balanced")
 
+        @chat_style_command_group.command(description="Switch chat style to Precise")
+        async def precise(ctx: discord.ApplicationContext):
+            await self.switch_chat_style(ctx, bot, "precise")
 
-async def switch_chat_style(ctx: discord.ApplicationContext, bot: discord.Bot, bing: BingBot, style: str):
-    await bing.switch_style(style)
-    await ctx.respond(f"Switch chat style to {style.capitalize()}")
-    await switch_bot_status(bot, bing)
+    def _add_command_switch_profile(self, bot):
+        @bot.command(name='profile', description="Switch the profile")
+        async def profile(ctx: discord.ApplicationContext):
+            await self.bing.switch_profile()
+            bing_status = self.bing.get_bot_status()
+            await self._switch_bot_status(bot)
+            await ctx.respond(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
+            print(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
 
+    async def switch_chat_style(self, ctx: discord.ApplicationContext, bot: discord.Bot, style: str):
+        await self.bing.switch_style(style)
+        await ctx.respond(f"Switch chat style to {style.capitalize()}")
+        await self._switch_bot_status(bot)
 
-async def switch_bot_status(bot: discord.Bot, bing: BingBot):
-    bing_status = bing.get_bot_status()
-    status_name = f"{bing_status.current_style.capitalize()}, Profile: ({bing_status.profile_index}/{bing_status.profile_total_num})"
-    await bot.change_presence(activity=discord.Game(status_name))
+    async def _switch_bot_status(self, bot: discord.Bot):
+        bing_status = self.bing.get_bot_status()
+        status_name = f"{bing_status.current_style.capitalize()}, Profile: ({bing_status.profile_index}/{bing_status.profile_total_num})"
+        await bot.change_presence(activity=discord.Game(status_name))
 
+    def _listen_on_message_event(self, bot: discord.Bot):
+        @bot.event
+        async def on_message(message: discord.Message):
+            if message.author.bot:
+                return
+            ctx: discord.ApplicationContext = await bot.get_application_context(message)
+            async with ctx.typing():
+                bing_resp: BingBotResponse = await self.bing.converse(message.content)
+            formatter_responses = self._formatter.format_message(bing_resp)
+            await self._respond_messages(formatter_responses, original_message=message)
 
-def listen_on_message_event(bot: discord.Bot, bing: BingBot):
-    @bot.event
-    async def on_message(message: discord.Message):
-        if message.author.bot:
+    async def _respond_messages(self, formatter_responses: List[FormatterResponse], original_message: discord.Message):
+        if len(formatter_responses) == 0:
             return
-        ctx: discord.ApplicationContext = await bot.get_application_context(message)
-        async with ctx.typing():
-            bing_resp: BingBotResponse = await bing.converse(message.content)
-        await message.reply(format_response_body(bing_resp), embed=format_response_embed(bing_resp),
-                            mention_author=False)
+        texts = [response.value for response in formatter_responses if response.type == FormatterResponseType.NORMAL]
+        embeds = [response.value for response in formatter_responses if response.type == FormatterResponseType.EMBED]
+        embed = embeds[0] if len(embeds) > 0 else None
+        for index, obj in enumerate(texts):
+            params = {
+                'content': obj
+            }
+            if index == len(texts) - 1:
+                params['embed'] = embed
+            if index == 0:
+                await original_message.reply(mention_author=False, **params)
+            else:
+                await original_message.channel.send(**params)
 
 
 async def get_bot(bing_bot_cookie_paths) -> discord.Bot:
-    bing_bot = BingBot(bing_bot_cookie_paths)
-
     intents = discord.Intents.all()
     bot = discord.Bot(intents=intents)
 
-    @bot.event
-    async def on_ready():
-        print(f"{bot.user} is ready and online!")
-        await switch_bot_status(bot, bing_bot)
-
-    add_command_reset(bot, bing_bot)
-    add_command_style(bot, bing_bot)
-    add_command_switch_profile(bot, bing_bot)
-    listen_on_message_event(bot, bing_bot)
+    bot_manager = BotManager(bing_bot_cookie_paths=bing_bot_cookie_paths)
+    bot_manager.initialize(bot)
 
     return bot
-
-
-def format_response_body(bing_resp: BingBotResponse):
-    return bing_resp.message
-
-
-def format_response_embed(bing_resp: BingBotResponse):
-    has_value = False
-
-    embed = discord.Embed()
-    embed.title = ""
-    embed.description = ""
-
-    # Citations
-    if bing_resp.citations is not None:
-        has_value = True
-        format_response_embed_add_citations(bing_resp, embed)
-
-    # Links
-    if bing_resp.links:
-        has_value = True
-        format_response_embed_add_links(bing_resp, embed)
-
-    # Throttling Limit
-    if bing_resp.current_conversation_num is not None and bing_resp.max_conversation_num is not None:
-        has_value = True
-        embed.add_field(name="Limit", value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
-
-    return embed if has_value else None
-
-
-def format_response_embed_add_links(bing_resp: BingBotResponse, embed: discord.Embed):
-    links = bing_resp.links
-    if links is None or len(links) == 0:
-        return
-
-    pattern = re.compile(r"\[([0-9]+\.\ \S+)\]\(([\S]+)\)")
-    matches = re.findall(pattern, links)
-    if matches is None or len(matches) == 0:
-        if len(links) > 1023:
-            links = "Message cannot show: too long."
-        embed.add_field(name="Links", value=links)
-    else:
-        for match in matches:
-            hostname, url = match
-            embed.add_field(name=hostname, value=f"[Link]({url})")
-
-
-def format_response_embed_add_citations(bing_resp, embed):
-    citations = bing_resp.citations
-    if citations is None or len(citations) == 0:
-        return
-
-    pattern = re.compile(r'\[(\d+)\]: (\S+) \"([^\"]+)\"')
-    matches = re.findall(pattern, citations)
-    if matches is None or len(matches) == 0:
-        if len(citations) > 4095:
-            citations = "Citations cannot show: too long"
-        embed.description = citations
-    else:
-        embed.title = "Citations"
-        for match in matches:
-            citation_num, url, title = match
-            embed.description += f"[[{citation_num}] {title}]({url})\n\n"
