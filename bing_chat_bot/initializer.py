@@ -12,6 +12,9 @@ class BotManager:
         self._formatter_options = FormatterOptions()
         self._formatter = Formatter(formatter_options=self._formatter_options)
 
+        self._bing_resp_cache = None
+        self._original_message_cache = None
+
     def initialize(self, bot: discord.Bot):
         @bot.event
         async def on_ready():
@@ -26,6 +29,7 @@ class BotManager:
         self._add_command_style(bot)
         self._add_command_switch_profile(bot)
         self._add_command_toggle(bot)
+        self._add_command_replay(bot)
 
     def _add_command_reset(self, bot: discord.Bot):
         # Reset the conversation and start a new one
@@ -77,6 +81,14 @@ class BotManager:
             self._formatter_options.show_limits = not self._formatter_options.show_limits
             await ctx.respond(f"Toggle configuration - showing limits. Current value: {self._formatter_options.show_limits}")
 
+    def _add_command_replay(self, bot: discord.Bot):
+        @bot.command(name='replay', description="Re-present the last message")
+        async def replay(ctx: discord.ApplicationContext):
+            if self._bing_resp_cache is None or self._original_message_cache is None:
+                await ctx.respond("No message to replay")
+            await ctx.respond("Re-presenting the last message")
+            await self._format_and_respond(self._bing_resp_cache, original_message=self._original_message_cache)
+
     async def switch_chat_style(self, ctx: discord.ApplicationContext, bot: discord.Bot, style: str):
         await self.bing.switch_style(style)
         await ctx.respond(f"Switch chat style to {style.capitalize()}")
@@ -95,8 +107,13 @@ class BotManager:
             ctx: discord.ApplicationContext = await bot.get_application_context(message)
             async with ctx.typing():
                 bing_resp: BingBotResponse = await self.bing.converse(message.content)
-            formatter_responses = self._formatter.format_message(bing_resp)
-            await self._respond_messages(formatter_responses, original_message=message)
+            self._bing_resp_cache = bing_resp
+            self._original_message_cache = message
+            await self._format_and_respond(bing_resp, original_message=message)
+
+    async def _format_and_respond(self, bing_resp: BingBotResponse, original_message: discord.message):
+        formatter_responses = self._formatter.format_message(bing_resp)
+        await self._respond_messages(formatter_responses, original_message)
 
     async def _respond_messages(self, formatter_responses: List[FormatterResponse], original_message: discord.Message):
         if len(formatter_responses) == 0:

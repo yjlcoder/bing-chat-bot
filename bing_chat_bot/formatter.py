@@ -8,7 +8,7 @@ from .bing import BingBotResponse
 
 
 class FormatterOptions:
-    def __init__(self, show_embed: bool = True, show_links: bool = True, show_limits: bool = True):
+    def __init__(self, show_embed: bool = True, show_links: bool = False, show_limits: bool = True):
         self.show_citations: bool = show_embed
         self.show_links: bool = show_links
         self.show_limits: bool = show_limits
