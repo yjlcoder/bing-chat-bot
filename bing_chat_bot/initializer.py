@@ -9,7 +9,7 @@ from .formatter import Formatter, FormatterResponse, FormatterOptions, Formatter
 class BotManager:
     def __init__(self, bing_bot_cookie_paths):
         self.bing = BingBot(bing_bot_cookie_paths)
-        self._formatter_options = FormatterOptions(show_embed=True)
+        self._formatter_options = FormatterOptions()
         self._formatter = Formatter(formatter_options=self._formatter_options)
 
     def initialize(self, bot: discord.Bot):
@@ -25,6 +25,7 @@ class BotManager:
         self._add_command_reset(bot)
         self._add_command_style(bot)
         self._add_command_switch_profile(bot)
+        self._add_command_toggle(bot)
 
     def _add_command_reset(self, bot: discord.Bot):
         # Reset the conversation and start a new one
@@ -57,6 +58,24 @@ class BotManager:
             await self._switch_bot_status(bot)
             await ctx.respond(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
             print(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
+
+    def _add_command_toggle(self, bot: discord.Bot):
+        toggle_command_group = bot.create_group("toggle", "Toggle chat configuration")
+
+        @toggle_command_group.command(desciption="Toggle if showing citations")
+        async def citations(ctx: discord.ApplicationContext):
+            self._formatter_options.show_citations = not self._formatter_options.show_citations
+            await ctx.respond(f"Toggle configuration - showing citations. Current value: {self._formatter_options.show_citations}")
+
+        @toggle_command_group.command(description="Toggle if showing links")
+        async def links(ctx: discord.ApplicationContext):
+            self._formatter_options.show_links = not self._formatter_options.show_links
+            await ctx.respond(f"Toggle configuration - showing links. Current value: {self._formatter_options.show_links}")
+
+        @toggle_command_group.command(description="Toggle if showing limits")
+        async def limits(ctx: discord.ApplicationContext):
+            self._formatter_options.show_limits = not self._formatter_options.show_limits
+            await ctx.respond(f"Toggle configuration - showing limits. Current value: {self._formatter_options.show_limits}")
 
     async def switch_chat_style(self, ctx: discord.ApplicationContext, bot: discord.Bot, style: str):
         await self.bing.switch_style(style)
