@@ -8,8 +8,10 @@ from .bing import BingBotResponse
 
 
 class FormatterOptions:
-    def __init__(self, show_embed: True):
-        self.show_embed: bool = show_embed
+    def __init__(self, show_embed: bool = True, show_links: bool = True, show_limits: bool = True):
+        self.show_citations: bool = show_embed
+        self.show_links: bool = show_links
+        self.show_limits: bool = show_limits
 
 
 class FormatterResponseType(Enum):
@@ -39,10 +41,9 @@ class Formatter:
         results = []
 
         results.append(FormatterResponse(FormatterResponseType.NORMAL, bing_resp.message))
-        if self._formatter_options.show_embed:
-            embed = self._format_response_embed(bing_resp)
-            if embed is not None:
-                results.append(FormatterResponse(FormatterResponseType.EMBED, embed))
+        embed = self._format_response_embed(bing_resp)
+        if embed is not None:
+            results.append(FormatterResponse(FormatterResponseType.EMBED, embed))
 
         return results
 
@@ -54,17 +55,17 @@ class Formatter:
         embed.description = ""
 
         # Citations
-        if bing_resp.citations is not None:
+        if bing_resp.citations is not None and self._formatter_options.show_citations:
             has_value = True
             self._format_response_embed_add_citations(bing_resp, embed)
 
         # Links
-        if bing_resp.links:
+        if bing_resp.links and self._formatter_options.show_links:
             has_value = True
             self._format_response_embed_add_links(bing_resp, embed)
 
         # Throttling Limit
-        if bing_resp.current_conversation_num is not None and bing_resp.max_conversation_num is not None:
+        if bing_resp.current_conversation_num is not None and bing_resp.max_conversation_num is not None and self._formatter_options.show_limits:
             has_value = True
             embed.add_field(name="Limit",
                             value=f"({bing_resp.current_conversation_num}/{bing_resp.max_conversation_num})")
