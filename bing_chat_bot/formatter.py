@@ -17,6 +17,7 @@ class FormatterOptions:
 class FormatterResponseType(Enum):
     NORMAL = auto(),
     EMBED = auto()
+    VIEW = auto()
 
 
 class FormatterResponse:
@@ -33,9 +34,19 @@ class FormatterResponse:
         return self._obj
 
 
+class SuggestedResponsesView(discord.ui.View):
+    def __init__(self, suggested_responses: List[str], callback_generator=None):
+        super().__init__()
+        for response in suggested_responses:
+            button = discord.ui.Button(label=response)
+            self.add_item(button)
+            self.children[-1].callback = callback_generator(button)
+
+
 class Formatter:
-    def __init__(self, formatter_options: FormatterOptions):
+    def __init__(self, formatter_options: FormatterOptions, suggested_response_callback_generator=None):
         self._formatter_options = formatter_options
+        self._suggested_response_callback_generator = suggested_response_callback_generator
 
     def format_message(self, bing_resp: BingBotResponse) -> List[FormatterResponse]:
         results = []
@@ -44,6 +55,10 @@ class Formatter:
         embed = self._format_response_embed(bing_resp)
         if embed is not None:
             results.append(FormatterResponse(FormatterResponseType.EMBED, embed))
+
+        view = self._format_response_view(bing_resp)
+        if view is not None:
+            results.append(FormatterResponse(FormatterResponseType.VIEW, view))
 
         return results
 
@@ -104,3 +119,8 @@ class Formatter:
             for match in matches:
                 citation_num, url, title = match
                 embed.description += f"[[{citation_num}] {title}]({url})\n\n"
+
+    def _format_response_view(self, bing_resp: BingBotResponse):
+        if bing_resp.suggested_responses is None or len(bing_resp.suggested_responses) == 0:
+            return None
+        return SuggestedResponsesView(bing_resp.suggested_responses, self._suggested_response_callback_generator)
