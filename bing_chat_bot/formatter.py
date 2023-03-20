@@ -141,12 +141,11 @@ class Formatter:
         """
         Recursively split large texts
         """
-        CODE_BLOCK_PATTERN = r"(```\n+?[\s\S]+?\n+?```)"
-
         if len(text) <= limit_length:
             return [text]
         # Find code block ranges. You don't want to split in the middle of code blocks
-        code_block_ranges = [(m.start(0), m.end(0)) for m in re.finditer(CODE_BLOCK_PATTERN, text)]
+        code_block_inds = [m.start(0) for m in re.finditer('```', text)]
+        code_block_ranges = [i for i in zip(code_block_inds[::2], code_block_inds[1::2])]
 
         # Find all the double line break. They are possible split point
         line_break_ind = [m.start() for m in re.finditer(r"\n\n", text)]
