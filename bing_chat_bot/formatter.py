@@ -1,10 +1,16 @@
+import operator
 import re
 from enum import Enum, auto
+from functools import reduce
+from itertools import compress
 from typing import List
 
 import discord
 
 from .bing import BingBotResponse
+
+# Text length greater than which value, the text needs to be split
+TEXT_SPLIT_THRESHOLD = 2000
 
 
 class FormatterOptions:
@@ -51,7 +57,7 @@ class Formatter:
     def format_message(self, bing_resp: BingBotResponse) -> List[FormatterResponse]:
         results = []
 
-        results.append(FormatterResponse(FormatterResponseType.NORMAL, bing_resp.message))
+        results.extend(self._format_response_text(bing_resp))
         embed = self._format_response_embed(bing_resp)
         if embed is not None:
             results.append(FormatterResponse(FormatterResponseType.EMBED, embed))
@@ -61,6 +67,11 @@ class Formatter:
             results.append(FormatterResponse(FormatterResponseType.VIEW, view))
 
         return results
+
+    def _format_response_text(self, bing_resp: BingBotResponse) -> List[FormatterResponse]:
+        if len(bing_resp.message) <= TEXT_SPLIT_THRESHOLD:
+            return [FormatterResponse(FormatterResponseType.NORMAL, bing_resp.message)]
+        return [FormatterResponse(FormatterResponseType.NORMAL, text_segment) for text_segment in Formatter.split_text(bing_resp.message, TEXT_SPLIT_THRESHOLD)]
 
     def _format_response_embed(self, bing_resp: BingBotResponse):
         has_value = False
@@ -124,3 +135,31 @@ class Formatter:
         if bing_resp.suggested_responses is None or len(bing_resp.suggested_responses) == 0:
             return None
         return SuggestedResponsesView(bing_resp.suggested_responses, self._suggested_response_callback_generator)
+
+    @staticmethod
+    def split_text(text, limit_length: int) -> List[str]:
+        """
+        Recursively split large texts
+        """
+        CODE_BLOCK_PATTERN = r"(```\n+?[\s\S]+?\n+?```)"
+
+        if len(text) <= limit_length:
+            return [text]
+        # Find code block ranges. You don't want to split in the middle of code blocks
+        code_block_ranges = [(m.start(0), m.end(0)) for m in re.finditer(CODE_BLOCK_PATTERN, text)]
+
+        # Find all the double line break. They are possible split point
+        line_break_ind = [m.start() for m in re.finditer(r"\n\n", text)]
+
+        # If there's no double line break, use single line break
+        if len(line_break_ind) == 0:
+            line_break_ind = [m.start() for m in re.finditer(r"\n", text)]
+
+        # A valid break point should 1) not in a code block, and 2) smaller than the limit_length
+        line_break_validity = [reduce(operator.and_, [True] + [i < start or i >= end for (start, end) in code_block_ranges] + [i < limit_length])
+                               for i in line_break_ind]
+        valid_line_break = compress(line_break_ind, line_break_validity)
+        break_point_ind = max(valid_line_break)
+
+        # Recursively call this method until all blocks are split
+        return [text[:break_point_ind].strip()] + Formatter.split_text(text[break_point_ind:].strip(), limit_length)
