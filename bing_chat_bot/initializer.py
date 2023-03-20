@@ -10,10 +10,11 @@ class BotManager:
     def __init__(self, bing_bot_cookie_paths):
         self.bing = BingBot(bing_bot_cookie_paths)
         self._formatter_options = FormatterOptions()
-        self._formatter = Formatter(formatter_options=self._formatter_options)
 
         self._bing_resp_cache = None
         self._original_message_cache = None
+
+        self._suggested_response_callback_generator = None
 
     def initialize(self, bot: discord.Bot):
         @bot.event
@@ -23,6 +24,9 @@ class BotManager:
 
         self._add_commands(bot)
         self._listen_on_message_event(bot)
+        self._suggested_response_callback_generator = self._create_suggested_response_callback_generator(bot)
+
+        self._formatter = Formatter(formatter_options=self._formatter_options, suggested_response_callback_generator=self._suggested_response_callback_generator)
 
     def _add_commands(self, bot: discord.Bot):
         self._add_command_reset(bot)
@@ -120,17 +124,42 @@ class BotManager:
             return
         texts = [response.value for response in formatter_responses if response.type == FormatterResponseType.NORMAL]
         embeds = [response.value for response in formatter_responses if response.type == FormatterResponseType.EMBED]
+        views = [response.value for response in formatter_responses if response.type == FormatterResponseType.VIEW]
         embed = embeds[0] if len(embeds) > 0 else None
+        view = views[0] if len(views) > 0 else None
+
         for index, obj in enumerate(texts):
             params = {
                 'content': obj
             }
             if index == len(texts) - 1:
                 params['embed'] = embed
+                params['view'] = view
             if index == 0:
                 await original_message.reply(mention_author=False, **params)
             else:
                 await original_message.channel.send(**params)
+
+    def _create_suggested_response_callback_generator(self, bot: discord.Bot):
+        """
+        This method is to create a callback generator
+        """
+        def callback_generator(button: discord.ui.Button):
+            """
+            This method is the callback generator that generates a callback function for each button
+            """
+            async def _handle_suggested_response(interaction: discord.Interaction):
+                response_content = button.label
+                await interaction.response.send_message(f"From user: **{response_content}**")
+                message = await interaction.original_response()
+                ctx: discord.ApplicationContext = await bot.get_application_context(message)
+                async with ctx.typing():
+                    bing_resp: BingBotResponse = await self.bing.converse(response_content)
+                self._bing_resp_cache = bing_resp
+                self._original_message_cache = message
+                await self._format_and_respond(bing_resp, original_message=message)
+            return _handle_suggested_response
+        return callback_generator
 
 
 async def get_bot(bing_bot_cookie_paths) -> discord.Bot:
