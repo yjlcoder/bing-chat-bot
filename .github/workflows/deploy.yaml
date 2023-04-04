@@ -1,0 +1,19 @@
+name: Deploy the latest code to the server
+run-name: Deploy
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: executing remote ssh command
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME}}
+          key: ${{ secrets.SSH_ID_RSA}}
+          port: ${{ secrets.SSH_PORT }}
+          script: whoami
