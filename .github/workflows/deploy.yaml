@@ -1,4 +1,4 @@
-name: Deploy the latest code to the server
+name: Deploy
 run-name: Deploy
 on:
   push:
