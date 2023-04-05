@@ -1,6 +1,7 @@
 from typing import List
 
 import discord
+from discord import MessageType
 
 from .bing import BingBot, BingBotResponse
 from .formatter import Formatter, FormatterResponse, FormatterOptions, FormatterResponseType
@@ -107,6 +108,10 @@ class BotManager:
         @bot.event
         async def on_message(message: discord.Message):
             if message.author.bot:
+                # The message is sent from a bot
+                return
+            if message.type != MessageType.default:
+                # Should not respond system message
                 return
             ctx: discord.ApplicationContext = await bot.get_application_context(message)
             async with ctx.typing():
