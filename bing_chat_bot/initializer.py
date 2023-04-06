@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import List
 
 import discord
@@ -130,20 +131,31 @@ class BotManager:
         texts = [response.value for response in formatter_responses if response.type == FormatterResponseType.NORMAL]
         embeds = [response.value for response in formatter_responses if response.type == FormatterResponseType.EMBED]
         views = [response.value for response in formatter_responses if response.type == FormatterResponseType.VIEW]
+        large_texts = [response.value for response in formatter_responses if response.type == FormatterResponseType.LARGE_TEXT]
         embed = embeds[0] if len(embeds) > 0 else None
         view = views[0] if len(views) > 0 else None
+        large_text = large_texts[0] if len(large_texts) > 0 else None
 
-        for index, obj in enumerate(texts):
+        if large_text is not None:
             params = {
-                'content': obj
+                'file': discord.File(BytesIO(large_text.encode('UTF-8')), filename="response.md"),
+                'embed': embed,
+                'view': view
             }
-            if index == len(texts) - 1:
-                params['embed'] = embed
-                params['view'] = view
-            if index == 0:
-                await original_message.reply(mention_author=False, **params)
-            else:
-                await original_message.channel.send(**params)
+            await original_message.reply(mention_author=False, **params)
+        else:
+            for index, obj in enumerate(texts):
+                params = {
+                    'content': obj
+                }
+                if index == len(texts) - 1:
+                    params['embed'] = embed
+                    params['view'] = view
+                if index == 0:
+                    await original_message.reply(mention_author=False, **params)
+                else:
+                    await original_message.channel.send(**params)
+
 
     def _create_suggested_response_callback_generator(self, bot: discord.Bot):
         """

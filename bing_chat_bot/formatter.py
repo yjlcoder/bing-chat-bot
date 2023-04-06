@@ -24,6 +24,7 @@ class FormatterResponseType(Enum):
     NORMAL = auto(),
     EMBED = auto()
     VIEW = auto()
+    LARGE_TEXT = auto()
 
 
 class FormatterResponse:
@@ -71,7 +72,11 @@ class Formatter:
     def _format_response_text(self, bing_resp: BingBotResponse) -> List[FormatterResponse]:
         if len(bing_resp.message) <= TEXT_SPLIT_THRESHOLD:
             return [FormatterResponse(FormatterResponseType.NORMAL, bing_resp.message)]
-        return [FormatterResponse(FormatterResponseType.NORMAL, text_segment) for text_segment in Formatter.split_text(bing_resp.message, TEXT_SPLIT_THRESHOLD)]
+        try:
+            return [FormatterResponse(FormatterResponseType.NORMAL, text_segment) for text_segment in Formatter.split_text(bing_resp.message, TEXT_SPLIT_THRESHOLD)]
+        except RuntimeError as ex:
+            print("Failed to split text for response. Use text file to send.")
+            return [FormatterResponse(FormatterResponseType.LARGE_TEXT, bing_resp.message)]
 
     def _format_response_embed(self, bing_resp: BingBotResponse):
         has_value = False
@@ -157,7 +162,9 @@ class Formatter:
         # A valid break point should 1) not in a code block, and 2) smaller than the limit_length
         line_break_validity = [reduce(operator.and_, [True] + [i < start or i >= end for (start, end) in code_block_ranges] + [i < limit_length])
                                for i in line_break_ind]
-        valid_line_break = compress(line_break_ind, line_break_validity)
+        valid_line_break = [i for i in compress(line_break_ind, line_break_validity)]
+        if len(valid_line_break) == 0:
+            raise RuntimeError("Cannot find a valid line break")
         break_point_ind = max(valid_line_break)
 
         # Recursively call this method until all blocks are split
