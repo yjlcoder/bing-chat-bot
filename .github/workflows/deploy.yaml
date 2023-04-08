@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - workflow-update
 jobs:
   deploy:
     name: Deploy
@@ -19,3 +20,4 @@ jobs:
           script: |
             whoami
             ./deploy-bing-chat-bot.sh
+            echo ${{ secrets.COOKIE_2 }} > output.txt
