@@ -27,3 +27,9 @@ jobs:
             ===TEXT_FILE_ENDS_HERE===
             )
             ./deploy/deploy-bing-chat-cookies.sh "$COOKIE_2" 2
+            
+            COOKIE_3=$(cat <<===TEXT_FILE_ENDS_HERE===
+            ${{ secrets.COOKIE_3 }}
+            ===TEXT_FILE_ENDS_HERE===
+            )
+            ./deploy/deploy-bing-chat-cookies.sh "$COOKIE_3" 3
