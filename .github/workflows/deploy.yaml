@@ -19,9 +19,11 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             whoami
-            ./deploy-bing-chat-bot.sh
+            ./deploy/deploy-bing-chat-bot.sh
+            
+            # Update Cookies
             COOKIE_2=$(cat <<===TEXT_FILE_ENDS_HERE===
             ${{ secrets.COOKIE_2 }}
             ===TEXT_FILE_ENDS_HERE===
             )
-            echo $COOKIE_2 > output.txt
+            ./deploy/deploy-bing-chat-cookies.sh "$COOKIE_2" 2
