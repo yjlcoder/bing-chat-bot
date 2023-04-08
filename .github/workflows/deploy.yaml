@@ -21,7 +21,7 @@ jobs:
             whoami
             ./deploy-bing-chat-bot.sh
             COOKIE_2=$(cat <<===TEXT_FILE_ENDS_HERE===
-              ${{ secrets.COOKIE_2 }}
-              ===TEXT_FILE_ENDS_HERE===
-              )
+            ${{ secrets.COOKIE_2 }}
+            ===TEXT_FILE_ENDS_HERE===
+            )
             echo $COOKIE_2 > output.txt
