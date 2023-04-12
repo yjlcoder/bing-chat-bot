@@ -143,6 +143,13 @@ class Formatter:
 
     @staticmethod
     def split_text(text, limit_length: int) -> List[str]:
+        try:
+            return Formatter._split_text_by_delimiter(text.strip(), limit_length, "\n\n")
+        except RuntimeError as e:
+            return Formatter._split_text_by_delimiter(text.strip(), limit_length, "\n")
+
+    @staticmethod
+    def _split_text_by_delimiter(text, limit_length: int, delimiter) -> List[str]:
         """
         Recursively split large texts
         """
@@ -152,12 +159,8 @@ class Formatter:
         code_block_inds = [m.start(0) for m in re.finditer('```', text)]
         code_block_ranges = [i for i in zip(code_block_inds[::2], code_block_inds[1::2])]
 
-        # Find all the double line break. They are possible split point
-        line_break_ind = [m.start() for m in re.finditer(r"\n\n", text)]
-
-        # If there's no double line break, use single line break
-        if len(line_break_ind) == 0:
-            line_break_ind = [m.start() for m in re.finditer(r"\n", text)]
+        # Find all the delimiters. They are possible split point
+        line_break_ind = [m.start() for m in re.finditer(delimiter, text)]
 
         # A valid break point should 1) not in a code block, and 2) smaller than the limit_length
         line_break_validity = [reduce(operator.and_, [True] + [i < start or i >= end for (start, end) in code_block_ranges] + [i < limit_length])
