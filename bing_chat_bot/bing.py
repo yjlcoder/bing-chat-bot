@@ -33,7 +33,7 @@ class BingBot:
         self._cookie_paths = cookie_paths
         self._profile_index = 0
 
-        self._bot = Chatbot(cookiePath=self._cookie_paths[0])
+        self._bot = Chatbot(cookie_path=self._cookie_paths[0])
         self._current_style = ConversationStyle.balanced
 
     def get_bot_status(self) -> BingBotStatus:
