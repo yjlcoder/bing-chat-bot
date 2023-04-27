@@ -1,5 +1,6 @@
+import logging
 from io import BytesIO
-from typing import List
+from typing import List, Optional
 
 import discord
 from discord import MessageType
@@ -7,6 +8,9 @@ from discord import MessageType
 from .bing import BingBot, BingBotResponse
 from .formatter import Formatter, FormatterResponse, FormatterOptions, FormatterResponseType
 
+AUTO_RESET_DIFF_SECONDS = 30 * 60
+
+logger = logging.getLogger(__name__)
 
 class BotManager:
     def __init__(self, bing_bot_cookie_paths):
@@ -14,14 +18,14 @@ class BotManager:
         self._formatter_options = FormatterOptions()
 
         self._bing_resp_cache = None
-        self._original_message_cache = None
+        self._original_message_cache: Optional[discord.Message] = None
 
         self._suggested_response_callback_generator = None
 
     def initialize(self, bot: discord.Bot):
         @bot.event
         async def on_ready():
-            print(f"{bot.user} is ready and online!")
+            logger.info(f"{bot.user} is ready and online!")
             await self._switch_bot_status(bot)
 
         self._add_commands(bot)
@@ -67,7 +71,7 @@ class BotManager:
             bing_status = self.bing.get_bot_status()
             await self._switch_bot_status(bot)
             await ctx.respond(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
-            print(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
+            logger.info(f"Switch to profile: {bing_status.profile_index}/{bing_status.profile_total_num}")
 
     def _add_command_toggle(self, bot: discord.Bot):
         toggle_command_group = bot.create_group("toggle", "Toggle chat configuration")
@@ -114,6 +118,13 @@ class BotManager:
             if message.type != MessageType.default:
                 # Should not respond system message
                 return
+            if self._original_message_cache is not None:
+                # If the new message comes more than AUTO_RESET_DIFF_SECONDS after the previous one, reset the conversation
+                time_diff = message.created_at - self._original_message_cache.created_at
+                time_diff_seconds = time_diff.total_seconds()
+                if time_diff_seconds >= AUTO_RESET_DIFF_SECONDS:
+                    await self.bing.reset()
+                    logger.info(f"Reset previous bing conversation: {time_diff_seconds} since last message.")
             ctx: discord.ApplicationContext = await bot.get_application_context(message)
             async with ctx.typing():
                 bing_resp: BingBotResponse = await self.bing.converse(message.content)
