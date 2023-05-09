@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+import EdgeGPT
 from EdgeGPT import Chatbot, ConversationStyle
 
 
@@ -70,7 +71,10 @@ class BingBot:
         response_item = response['item']
         result = response_item['result']
         if result['value'] != 'Success':
-            await self.reset()
+            try:
+                await self.reset()
+            except EdgeGPT.NotAllowedToAccess as e:
+                return BingBotResponse(False, f'Error: {str(e)}')
             return BingBotResponse(False, f'Error: conversation has been reset. Reason: {result["value"]}')
 
         throttling = response_item['throttling']
