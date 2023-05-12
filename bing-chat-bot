@@ -2,13 +2,13 @@
 import asyncio
 import logging
 import os
+import sys
 
 from bing_chat_bot.initializer import get_bot
 
 BING_CHAT_COOKIE_PATHS = os.getenv('BING_CHAT_COOKIES_PATH')
 
-logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 async def start():
     bot = await get_bot(BING_CHAT_COOKIE_PATHS.split(":"))
