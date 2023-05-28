@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional
 
 import EdgeGPT
@@ -34,7 +35,7 @@ class BingBot:
         self._cookie_paths = cookie_paths
         self._profile_index = 0
 
-        self._bot = Chatbot(cookie_path=self._cookie_paths[0])
+        self._bot = Chatbot(cookies=json.load(open(self._cookie_paths[0], encoding='utf-8')))
         self._current_style = ConversationStyle.balanced
 
     def get_bot_status(self) -> BingBotStatus:
@@ -53,7 +54,7 @@ class BingBot:
         except Exception:
             pass
         self._profile_index = (self._profile_index + 1) % len(self._cookie_paths)
-        self._bot = Chatbot(cookiePath=self._cookie_paths[self._profile_index])
+        self._bot = Chatbot(cookies=json.load(open(self._cookie_paths[self._profile_index], encoding='utf-8')))
 
     async def reset(self):
         await self._bot.reset()
