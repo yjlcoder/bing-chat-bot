@@ -8,10 +8,19 @@ from bing_chat_bot.initializer import get_bot
 
 BING_CHAT_COOKIE_PATHS = os.getenv('BING_CHAT_COOKIES_PATH')
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+def init_logger():
+    logger = logging.getLogger("bing_chat_bot")
+    logger.setLevel(level=logging.INFO)
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+
 
 async def start():
+    init_logger()
     bot = await get_bot(BING_CHAT_COOKIE_PATHS.split(":"))
     await bot.start(os.getenv('BING_CHAT_BOT_TOKEN'))  # run the bot with the token
+
 
 asyncio.run(start())

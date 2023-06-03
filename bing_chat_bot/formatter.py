@@ -1,3 +1,4 @@
+import logging
 import operator
 import re
 from enum import Enum, auto
@@ -11,6 +12,8 @@ from .bing import BingBotResponse
 
 # Text length greater than which value, the text needs to be split
 TEXT_SPLIT_THRESHOLD = 2000
+
+logger = logging.getLogger(__name__)
 
 
 class FormatterOptions:

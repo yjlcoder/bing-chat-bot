@@ -1,3 +1,4 @@
+import datetime
 import logging
 from io import BytesIO
 from typing import List, Optional
@@ -11,6 +12,7 @@ from .formatter import Formatter, FormatterResponse, FormatterOptions, Formatter
 AUTO_RESET_DIFF_SECONDS = 30 * 60
 
 logger = logging.getLogger(__name__)
+
 
 class BotManager:
     def __init__(self, bing_bot_cookie_paths):
@@ -118,6 +120,7 @@ class BotManager:
             if message.type != MessageType.default:
                 # Should not respond system message
                 return
+            logger.info("Received a msg from user.")
             if self._original_message_cache is not None:
                 # If the new message comes more than AUTO_RESET_DIFF_SECONDS after the previous one, reset the conversation
                 time_diff = message.created_at - self._original_message_cache.created_at
@@ -167,16 +170,18 @@ class BotManager:
                 else:
                     await original_message.channel.send(**params)
 
-
     def _create_suggested_response_callback_generator(self, bot: discord.Bot):
         """
         This method is to create a callback generator
         """
+
         def callback_generator(button: discord.ui.Button):
             """
             This method is the callback generator that generates a callback function for each button
             """
+
             async def _handle_suggested_response(interaction: discord.Interaction):
+                logger.info("Received a suggested response from user")
                 response_content = button.label
                 await interaction.response.send_message(f"From user: **{response_content}**")
                 message = await interaction.original_response()
@@ -186,7 +191,9 @@ class BotManager:
                 self._bing_resp_cache = bing_resp
                 self._original_message_cache = message
                 await self._format_and_respond(bing_resp, original_message=message)
+
             return _handle_suggested_response
+
         return callback_generator
 
 
