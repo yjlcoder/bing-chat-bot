@@ -1,9 +1,11 @@
 import json
+import logging
 from typing import List, Optional
 
 import EdgeGPT
 from EdgeGPT import Chatbot, ConversationStyle
 
+logger = logging.getLogger(__name__)
 
 class BingBotResponse:
     def __init__(self,
@@ -68,7 +70,9 @@ class BingBot:
         await self.reset()
 
     async def converse(self, text: str) -> BingBotResponse:
+        logger.info("Sending a request to Bing server.")
         response = await self._bot.ask(prompt=text, conversation_style=self._current_style)
+        logger.info("Received a response from Bing server.")
         response_item = response['item']
         result = response_item['result']
         if result['value'] != 'Success':
@@ -92,13 +96,13 @@ class BingBot:
         try:
             suggested_responses = [i['text'] for i in message['suggestedResponses']]
         except Exception:
-            pass
+            logger.exception("Error occurs during parsing suggested responses")
 
         links = None
         try:
             links = message['adaptiveCards'][0]['body'][1]['text']
         except Exception:
-            pass
+            logger.exception("Error occurs during parsing links")
 
         citations = None
         try:
@@ -106,6 +110,6 @@ class BingBot:
             if citation_text.startswith('[1]'):
                 citations = citation_text.split('\n\n')[0]
         except Exception:
-            pass
+            logger.exception("Error occurs during parsing citations")
 
         return BingBotResponse(True, message_text, cur_num, max_num, suggested_responses, links, citations)
