@@ -1,2 +1,2 @@
-EdgeGPT==0.8.0
+EdgeGPT==0.12.1
 py-cord==2.4.1
